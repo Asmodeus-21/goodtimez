@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await getServerSession(authOptions);
 
@@ -25,7 +26,7 @@ export async function POST(
 
         // Get live stream
         const liveStream = await prisma.liveStream.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 creator: {
                     include: {
@@ -83,7 +84,7 @@ export async function POST(
 
         // Update live stream total tips
         await prisma.liveStream.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 totalTips: {
                     increment: amount,

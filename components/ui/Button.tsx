@@ -35,21 +35,25 @@ export function Button({
     };
 
     return (
-        <motion.button
-            className={cn(baseStyles, variants[variant], sizes[size], className)}
+        <motion.div
             whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
             whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
-            disabled={disabled || isLoading}
-            {...props}
+            className="inline-block"
         >
-            {isLoading ? (
-                <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Loading...</span>
-                </div>
-            ) : (
-                children
-            )}
-        </motion.button>
+            <button
+                className={cn(baseStyles, variants[variant], sizes[size], className)}
+                disabled={disabled || isLoading}
+                {...props}
+            >
+                {isLoading ? (
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span>Loading...</span>
+                    </div>
+                ) : (
+                    children
+                )}
+            </button>
+        </motion.div>
     );
 }

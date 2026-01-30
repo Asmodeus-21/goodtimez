@@ -62,12 +62,12 @@ export async function POST(request: NextRequest) {
 
         // Create notifications for subscribers
         await prisma.notification.createMany({
-            data: subscribers.map((sub) => ({
+            data: subscribers.map((sub: any) => ({
                 userId: sub.fan.userId,
                 type: "LIVE_STREAM",
                 title: `${creatorProfile.displayName} is live!`,
-                message: title,
-                link: `/live/${liveStream.id}`,
+                message: `Join the stream now!`,
+                actionUrl: `/live/${liveStream.id}`,
             })),
         });
 

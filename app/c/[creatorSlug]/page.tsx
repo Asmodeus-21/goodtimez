@@ -5,11 +5,13 @@ import { DEMO_CREATORS } from "@/lib/demo-data";
 export default async function CreatorPortalPage({
     params
 }: {
-    params: { creatorSlug: string }
+    params: Promise<{ creatorSlug: string }>
 }) {
+    const { creatorSlug } = await params;
+
     // In demo mode, find creator by slug
     const creator = DEMO_CREATORS.find(
-        c => c.displayName.toLowerCase().replace(/\s+/g, '-') === params.creatorSlug
+        c => c.displayName.toLowerCase().replace(/\s+/g, '-') === creatorSlug
     );
 
     if (!creator) {
@@ -19,7 +21,7 @@ export default async function CreatorPortalPage({
                     <div className="text-6xl mb-4">😕</div>
                     <h1 className="text-2xl font-bold mb-2">Creator Not Found</h1>
                     <p className="text-dark-muted">
-                        The creator "{params.creatorSlug}" doesn't exist.
+                        The creator "{creatorSlug}" doesn't exist.
                     </p>
                 </div>
             </div>

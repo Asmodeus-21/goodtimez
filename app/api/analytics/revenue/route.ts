@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
         // Group by date
         const revenueByDate: Record<string, number> = {};
-        transactions.forEach((tx) => {
+        transactions.forEach((tx: any) => {
             const date = tx.createdAt.toISOString().split("T")[0];
             revenueByDate[date] = (revenueByDate[date] || 0) + tx.amount;
         });
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
             tips: 0,
         };
 
-        transactions.forEach((tx) => {
+        transactions.forEach((tx: any) => {
             if (tx.type === "SUBSCRIPTION") {
                 breakdown.subscriptions += tx.amount;
             } else if (tx.type === "PURCHASE") {
