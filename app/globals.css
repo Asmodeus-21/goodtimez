@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: "Inter", system-ui, sans-serif;
+    --font-outfit: "Outfit", system-ui, sans-serif;
+  }
+
+  * {
+    @apply border-dark-border;
+  }
+
+  body {
+    @apply bg-dark-bg text-dark-text font-sans antialiased;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-surface;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-dark-muted;
+  }
+}
+
+@layer components {
+  /* Glassmorphism utility */
+  .glass {
+    @apply bg-glass-light backdrop-blur-xl border border-glass-medium shadow-glass;
+  }
+
+  .glass-heavy {
+    @apply bg-glass-heavy backdrop-blur-2xl border border-white/20 shadow-glass;
+  }
+
+  /* Premium gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-400 via-neon-purple to-neon-blue;
+  }
+
+  /* Neon glow effect */
+  .neon-glow {
+    @apply shadow-neon;
+  }
+
+  /* Skeleton loader */
+  .skeleton {
+    @apply bg-dark-elevated animate-shimmer;
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  /* Premium button base */
+  .btn-premium {
+    @apply relative overflow-hidden rounded-xl px-6 py-3 font-semibold transition-all duration-300;
+    @apply bg-gradient-premium text-white shadow-premium;
+    @apply hover:scale-105 hover:shadow-neon active:scale-95;
+  }
+
+  /* Blur intro effect */
+  .blur-intro {
+    @apply backdrop-blur-3xl bg-gradient-to-br from-dark-bg/80 via-dark-surface/70 to-dark-elevated/60;
+  }
+
+  /* Floating animation */
+  .float {
+    @apply animate-float;
+  }
+
+  /* Touch-to-view blur */
+  .touch-blur {
+    @apply blur-2xl transition-all duration-300;
+  }
+
+  .touch-blur.revealed {
+    @apply blur-none;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Text shadow utilities */
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Haptic feedback simulation (visual) */
+  .haptic-feedback {
+    @apply active:scale-95 transition-transform duration-75;
+  }
+}
+
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');

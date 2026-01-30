@@ -1,0 +1,751 @@
+// Goodtimez Platform Database Schema
+// Supports: Fan, Creator, Brand/Agency, Admin portals
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+enum UserRole {
+  FAN
+  CREATOR
+  BRAND
+  AGENCY
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AccountStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRES_REVIEW
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  username      String        @unique
+  passwordHash  String
+  role          UserRole
+  status        AccountStatus @default(PENDING_VERIFICATION)
+  
+  // Profile data (polymorphic based on role)
+  fanProfile     FanProfile?
+  creatorProfile CreatorProfile?
+  brandProfile   BrandProfile?
+  adminProfile   AdminProfile?
+  
+  // Authentication
+  emailVerified  DateTime?
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  
+  // Relations
+  sessions      Session[]
+  kycDocuments  KYCDocument[]
+  wallet        Wallet?
+  transactions  Transaction[]
+  messages      Message[]
+  notifications Notification[]
+  reports       Report[]
+  auditLogs     AuditLog[]
+  
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([status])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================
+// PROFILES (Role-specific)
+// ============================================
+
+model FanProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  displayName     String?
+  avatar          String?
+  bio             String?
+  
+  // White-Label: Active creator context
+  activeCreatorId String?
+  
+  // Gamification
+  totalSpent      Float    @default(0)
+  rank            String?  // "Diamond Whale", "Platinum", etc.
+  badges          String[] // Array of badge IDs
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  
+  // Privacy
+  stealthMode     Boolean  @default(false)
+  showOnLeaderboard Boolean @default(true)
+  
+  // Preferences
+  interestTags    String[]
+  
+  // Relations
+  subscriptions   Subscription[]
+  purchases       Purchase[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CreatorProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  displayName     String
+  avatar          String?
+  bannerVideo     String?  // Cinematic loop
+  bio             String?
+  
+  // Verification
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt      DateTime?
+  
+  // Branding
+  customTheme     Json?    // Custom colors
+  socialLinks     Json?    // Instagram, Twitter, TikTok
+  
+  // Pricing
+  subscriptionPrice Float?
+  customMenuPrices  Json?  // Voice notes, custom videos, etc.
+  
+  // Stats
+  totalEarnings   Float    @default(0)
+  totalSubscribers Int     @default(0)
+  totalContent    Int      @default(0)
+  
+  // Commission
+  customCommissionRate Float? // Override global rate
+  
+  // Agency
+  agencyId        String?
+  agency          AgencyProfile? @relation(fields: [agencyId], references: [id])
+  
+  // Relations
+  content         Content[]
+  subscriptions   Subscription[]
+  campaigns       Campaign[]
+  brand           CreatorBrand?  // White-label branding
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([verificationStatus])
+}
+
+model BrandProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyName     String
+  logo            String?
+  website         String?
+  
+  // Verification
+  verified        Boolean  @default(false)
+  verifiedAt      DateTime?
+  
+  // Billing
+  creditLine      Float    @default(0)
+  
+  // Relations
+  campaigns       Campaign[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AgencyProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  agencyName      String
+  logo            String?
+  
+  // Commission
+  agencyCommissionRate Float @default(0.15)
+  
+  // Relations
+  creators        CreatorProfile[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AdminProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  permissions     String[] // Array of permission strings
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// KYC & COMPLIANCE
+// ============================================
+
+enum DocumentType {
+  PASSPORT
+  DRIVERS_LICENSE
+  NATIONAL_ID
+  SELFIE
+  LIVENESS_VIDEO
+}
+
+model KYCDocument {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  documentType    DocumentType
+  fileUrl         String
+  
+  // Verification
+  status          VerificationStatus @default(PENDING)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  
+  // AI Analysis
+  confidenceScore Float?
+  aiFlags         Json?
+  
+  // 2257 Compliance
+  linkedContentIds String[] // Content this ID is linked to
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model ConsentForm {
+  id              String   @id @default(cuid())
+  contentId       String
+  content         Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  performerEmail  String
+  performerName   String
+  
+  // E-signature
+  signed          Boolean  @default(false)
+  signedAt        DateTime?
+  signatureData   String?  // Base64 signature image
+  ipAddress       String?
+  
+  // Status
+  sentAt          DateTime @default(now())
+  expiresAt       DateTime
+  
+  @@index([contentId])
+  @@index([signed])
+}
+
+// ============================================
+// CONTENT
+// ============================================
+
+enum ContentType {
+  PHOTO
+  VIDEO
+  AUDIO
+  LIVE_STREAM
+  MESSAGE
+}
+
+enum ContentVisibility {
+  PUBLIC          // Free preview
+  SUBSCRIBERS     // Subscription required
+  PPV             // Pay-per-view
+  CUSTOM_REQUEST  // Custom order
+}
+
+model Content {
+  id              String   @id @default(cuid())
+  creatorId       String
+  creator         CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  type            ContentType
+  visibility      ContentVisibility
+  
+  // Files
+  originalFileUrl String
+  teaserFileUrl   String?  // Blurred/preview
+  optimizedFileUrl String? // Web-optimized
+  
+  // Metadata
+  title           String?
+  description     String?
+  tags            String[]
+  duration        Int?     // For video/audio (seconds)
+  
+  // Pricing
+  price           Float?   // For PPV
+  
+  // Watermarking
+  watermarkEnabled Boolean @default(true)
+  
+  // DRM
+  drmEnabled      Boolean @default(false)
+  drmKeyId        String?
+  
+  // Self-destruct
+  expiresAt       DateTime?
+  viewLimit       Int?     // Max views before deletion
+  currentViews    Int      @default(0)
+  
+  // AI Analysis
+  aiTags          String[]
+  aiCaption       String?
+  moderationScore Float?
+  
+  // Stats
+  totalUnlocks    Int      @default(0)
+  totalRevenue    Float    @default(0)
+  
+  // Relations
+  purchases       Purchase[]
+  consentForms    ConsentForm[]
+  
+  // Moderation
+  flagged         Boolean  @default(false)
+  flagReason      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([creatorId])
+  @@index([visibility])
+  @@index([flagged])
+}
+
+// ============================================
+// PAYMENTS & WALLET
+// ============================================
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  TOKENS  // Platform tokens
+  BTC
+  ETH
+  USDC
+}
+
+model Wallet {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Balances
+  tokenBalance    Float    @default(0)
+  usdBalance      Float    @default(0)
+  cryptoBalances  Json?    // { BTC: 0.001, ETH: 0.05 }
+  
+  // Pending
+  pendingBalance  Float    @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  PURCHASE
+  SUBSCRIPTION
+  TIP
+  CUSTOM_REQUEST
+  COMMISSION
+  REFUND
+  CHARGEBACK
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  DISPUTED
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  
+  amount          Float
+  currency        Currency
+  
+  // Payment method
+  paymentMethod   String?  // "stripe", "crypto", "upi", "pix"
+  paymentId       String?  // External payment ID
+  
+  // Metadata
+  description     String?
+  metadata        Json?
+  
+  // Commission tracking
+  platformFee     Float?
+  agencyFee       Float?
+  creatorEarnings Float?
+  
+  // Relations
+  relatedPurchaseId String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+// ============================================
+// SUBSCRIPTIONS & PURCHASES
+// ============================================
+
+model Subscription {
+  id              String   @id @default(cuid())
+  fanId           String
+  fan             FanProfile @relation(fields: [fanId], references: [id], onDelete: Cascade)
+  creatorId       String
+  creator         CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  // Pricing
+  monthlyPrice    Float
+  
+  // Status
+  active          Boolean  @default(true)
+  autoRenew       Boolean  @default(true)
+  
+  // Dates
+  startedAt       DateTime @default(now())
+  expiresAt       DateTime
+  cancelledAt     DateTime?
+  
+  // Streak
+  consecutiveMonths Int    @default(1)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([fanId])
+  @@index([creatorId])
+  @@index([active])
+}
+
+model Purchase {
+  id              String   @id @default(cuid())
+  fanId           String
+  fan             FanProfile @relation(fields: [fanId], references: [id], onDelete: Cascade)
+  contentId       String
+  content         Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  price           Float
+  
+  // Access control
+  unlocked        Boolean  @default(false)
+  unlockedAt      DateTime?
+  viewCount       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([fanId])
+  @@index([contentId])
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+enum MessageType {
+  TEXT
+  PHOTO
+  VIDEO
+  AUDIO
+  PPV_LOCKED
+}
+
+model Message {
+  id              String   @id @default(cuid())
+  senderId        String
+  sender          User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId     String
+  
+  type            MessageType
+  content         String?  // Text content
+  mediaUrl        String?  // Photo/video/audio URL
+  
+  // PPV
+  isPPV           Boolean  @default(false)
+  price           Float?
+  unlocked        Boolean  @default(false)
+  
+  // Status
+  read            Boolean  @default(false)
+  readAt          DateTime?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([createdAt])
+}
+
+// ============================================
+// CAMPAIGNS (Brand/Agency)
+// ============================================
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_CREATOR
+  IN_PROGRESS
+  PENDING_APPROVAL
+  COMPLETED
+  CANCELLED
+}
+
+model Campaign {
+  id              String   @id @default(cuid())
+  brandId         String
+  brand           BrandProfile @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  creatorId       String
+  creator         CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String
+  brief           Json     // Structured brief data
+  
+  // Pricing
+  totalBudget     Float
+  
+  // Escrow
+  escrowHeld      Float    @default(0)
+  escrowReleased  Float    @default(0)
+  
+  // Milestones
+  milestones      Json?    // Array of milestone objects
+  
+  // Deliverables
+  deliverables    Json?    // Uploaded content URLs
+  
+  // Status
+  status          CampaignStatus @default(DRAFT)
+  
+  // Dates
+  deadline        DateTime?
+  completedAt     DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([brandId])
+  @@index([creatorId])
+  @@index([status])
+}
+
+// ============================================
+// NOTIFICATIONS & REPORTS
+// ============================================
+
+enum NotificationType {
+  NEW_SUBSCRIBER
+  NEW_MESSAGE
+  NEW_TIP
+  CONTENT_PURCHASED
+  WHALE_ONLINE
+  SUBSCRIPTION_EXPIRING
+  PAYOUT_READY
+  CAMPAIGN_REQUEST
+  VERIFICATION_COMPLETE
+}
+
+model Notification {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type            NotificationType
+  title           String
+  message         String
+  
+  // Metadata
+  actionUrl       String?
+  metadata        Json?
+  
+  // Status
+  read            Boolean  @default(false)
+  readAt          DateTime?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([read])
+}
+
+model Report {
+  id              String   @id @default(cuid())
+  reporterId      String
+  reporter        User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  
+  // What's being reported
+  reportedUserId  String?
+  reportedContentId String?
+  
+  reason          String
+  description     String?
+  
+  // Status
+  reviewed        Boolean  @default(false)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  action          String?  // "dismissed", "warning", "ban", etc.
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([reporterId])
+  @@index([reviewed])
+}
+
+// ============================================
+// AUDIT & ANALYTICS
+// ============================================
+
+// ============================================
+// WHITE-LABEL BRANDING
+// ============================================
+
+model CreatorBrand {
+  id                String   @id @default(cuid())
+  creatorId         String   @unique
+  creator           CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  // Visual Identity
+  brandName         String   // "Tulika Official"
+  logoUrl           String?
+  faviconUrl        String?
+  
+  // Color Scheme (AI-generated or manual)
+  primaryColor      String   @default("#8b5cf6")
+  secondaryColor    String   @default("#ec4899")
+  accentColor       String   @default("#06b6d4")
+  backgroundColor   String   @default("#0a0a0f")
+  textColor         String   @default("#ffffff")
+  
+  // Typography
+  headingFont       String   @default("Outfit")
+  bodyFont          String   @default("Inter")
+  
+  // Custom Domain/Subdomain
+  customDomain      String?  @unique
+  subdomain         String?  @unique
+  
+  // PWA Configuration
+  pwaName           String   // "Tulika Official"
+  pwaShortName      String   // "Tulika"
+  pwaIconUrl        String?
+  pwaDescription    String?
+  
+  // Messaging Customization
+  notificationName  String   // "Tulika" (for push notifications)
+  chatHeaderTitle   String   // "Chat with Tulika"
+  
+  // Billing
+  statementDescriptor String? // "TULIKA_PREMIUM" (max 22 chars for Stripe)
+  
+  // Feature Flags (Discovery Lockout)
+  hideExplore       Boolean  @default(true)
+  hideSearch        Boolean  @default(true)
+  hideSuggestions   Boolean  @default(true)
+  hideCreatorList   Boolean  @default(true)
+  
+  // SEO
+  metaTitle         String?
+  metaDescription   String?
+  metaKeywords      String[]
+  
+  // Social Links (branded)
+  brandedSocialLinks Json?   // Custom social media links
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([subdomain])
+  @@index([customDomain])
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  action          String   // "user.login", "content.upload", etc.
+  entityType      String?  // "User", "Content", etc.
+  entityId        String?
+  
+  // Context
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
