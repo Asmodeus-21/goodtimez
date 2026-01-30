@@ -41,6 +41,7 @@
 }
 
 @layer components {
+
   /* Glassmorphism utility */
   .glass {
     @apply bg-glass-light backdrop-blur-xl border border-glass-medium shadow-glass;
@@ -63,12 +64,10 @@
   /* Skeleton loader */
   .skeleton {
     @apply bg-dark-elevated animate-shimmer;
-    background-image: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.05) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
+    background-image: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0) 100%);
     background-size: 200% 100%;
   }
 
@@ -100,6 +99,7 @@
 }
 
 @layer utilities {
+
   /* Hide scrollbar */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -131,3 +131,143 @@
 
 /* Google Fonts Import */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ============================================ */
+/* MOBILE OPTIMIZATIONS */
+/* ============================================ */
+
+/* Prevent text size adjustment on iOS */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior-y: contain;
+  overflow-x: hidden;
+}
+
+/* Remove tap highlight on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Better touch scrolling */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  .safe-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Mobile-friendly modals */
+@media (max-width: 640px) {
+  .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 1.5rem 1.5rem 0 0;
+  }
+}
+
+/* Better mobile navigation */
+@media (max-width: 768px) {
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Touch-friendly card spacing */
+@media (max-width: 640px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Optimize images for mobile */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Better mobile typography */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 2rem !important;
+    line-height: 2.25rem !important;
+  }
+
+  h2 {
+    font-size: 1.5rem !important;
+    line-height: 1.75rem !important;
+  }
+
+  h3 {
+    font-size: 1.25rem !important;
+    line-height: 1.5rem !important;
+  }
+}
+
+/* Mobile-friendly buttons */
+@media (max-width: 640px) {
+
+  button:not(.icon-only),
+  .btn:not(.icon-only) {
+    min-height: 44px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* Landscape mode optimizations */
+@media (max-height: 500px) and (orientation: landscape) {
+  .modal-content {
+    max-height: 80vh;
+  }
+}
+
+/* Touch-friendly interactive elements */
+a,
+button,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile container padding */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
