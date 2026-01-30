@@ -5,11 +5,16 @@ export function middleware(request: NextRequest) {
     const hostname = request.headers.get('host') || '';
     const url = request.nextUrl.clone();
 
+    // Skip Vercel deployment URLs (they contain .vercel.app)
+    if (hostname.includes('.vercel.app') || hostname.includes('localhost')) {
+        return NextResponse.next();
+    }
+
     // Extract subdomain
     const parts = hostname.split('.');
 
-    // Check if it's a subdomain (not www, not localhost, not main domain)
-    if (parts.length >= 3 || (parts.length === 2 && !hostname.includes('localhost'))) {
+    // Check if it's a subdomain (not www, not main domain)
+    if (parts.length >= 3) {
         const subdomain = parts[0];
 
         // Skip common subdomains
